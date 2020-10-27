@@ -429,25 +429,18 @@ summary {
 </div>
 
 
-<pre><code>## Warning: package &#39;knitr&#39; was built under R version 4.0.3</code></pre>
 <ol style="list-style-type: decimal">
 <li><p><a href="https://blogs.oracle.com/datascience/introduction-to-forecasting-with-arima-in-r">Time series forecasting using ARIMA models</a></p>
 <p>This example is important because it introduces the forecasting methodology using ARIMA models in R. The steps are examining the data, decomposing the data to seasonal, trend and cycle components, correcting non-stationary series if needed, choosing the model order parameters so that autocorrelations are minimized, fitting the modified series into an ARIMA model and finally evaluating the model to edit parameters until the model looks smooth.</p></li>
-<li><p><a href="https://otexts.com/fpp2/nnetar.html">Time series forecasting using NNETAR models</a></p></li>
+<li><p><a href="https://otexts.com/fpp2/nnetar.html">Time series forecasting using NNETAR models</a></p>
+<p>This example is important because it introduces the forecasting methodology using NNETAR models in R. NNETAR model uses a neural network. Every network has an input and output layer, and not necessarily some hidden layers. Model uses the last elements of the sequence as inputs and forecasts the next value using different weights of inputs between layers. Model is used iteratively to move forecasting forward, used repeatedly to make predictions better.</p></li>
+<li><p><a href="https://www.r-bloggers.com/2012/07/a-practical-introduction-to-garch-modeling/">Time series forecasting using GARCH models</a></p>
+<p>This example is important because it introduces the forecasting methodology using GARCH models in R. GARCH model has a view of changing and predictible variance as oppossed to others. The steps are basically estimating the best fit autoregressive model, calculating autocorrelations of the error term and testing for statistical significance.</p></li>
+<li><p><a href="https://robjhyndman.com/hyndsight/forecasting-weekly-data/">Time series forecasting using TBATS models</a></p>
+<p>This example is important because it introduces the forecasting methodology using TBATS models in R. TBATS models have the advantage of the ability to accommodate multiple seasonality. The steps are preparing the training and testing data, providing information about season lengths to the model, and fitting the training data to the model to predict future values.</p></li>
+<li><p><a href="https://machinelearningmastery.com/time-series-forecasting-with-prophet-in-python/#:~:text=To%20use%20Prophet%20for%20forecasting,type%20of%20seasonality%2C%20and%20more.">Time series forecasting using Prophet models</a></p>
+<p>This example is important because it introduces the forecasting methodology using Prophet models developed by Facebook Core Data Science Team in Python. The steps are simply preparing the data as needed, providing the model with the known parameters such as growth type, seasonality type, holidays etc., and letting model to do the rest.</p></li>
 </ol>
-<p>This example is important because it introduces the forecasting methodology using NNETAR models in R. NNETAR model uses a neural network. Every network has an input and output layer, and not necessarily some hidden layers. Model uses the last elements of the sequence as inputs and forecasts the next value using different weights of inputs between layers. Model is used iteratively to move forecasting forward, used repeatedly to make predictions better.</p>
-<ol start="3" style="list-style-type: decimal">
-<li><a href="https://www.r-bloggers.com/2012/07/a-practical-introduction-to-garch-modeling/">Time series forecasting using GARCH models</a></li>
-</ol>
-<p>This example is important because it introduces the forecasting methodology using GARCH models in R. GARCH model has a view of changing and predictible variance as oppossed to others. The steps are basically estimating the best fit autoregressive model, calculating autocorrelations of the error term and testing for statistical significance.</p>
-<ol start="4" style="list-style-type: decimal">
-<li><a href="https://robjhyndman.com/hyndsight/forecasting-weekly-data/">Time series forecasting using TBATS models</a></li>
-</ol>
-<p>This example is important because it introduces the forecasting methodology using TBATS models in R. TBATS models have the advantage of the ability to accommodate multiple seasonality. The steps are preparing the training and testing data, providing information about season lengths to the model, and fitting the training data to the model to predict future values.</p>
-<ol start="5" style="list-style-type: decimal">
-<li><a href="https://machinelearningmastery.com/time-series-forecasting-with-prophet-in-python/#:~:text=To%20use%20Prophet%20for%20forecasting,type%20of%20seasonality%2C%20and%20more.">Time series forecasting using Prophet models</a></li>
-</ol>
-<p>This example is important because it introduces the forecasting methodology using Prophet models developed by Facebook Core Data Science Team in Python. The steps are simply preparing the data as needed, providing the model with the known parameters such as growth type, seasonality type, holidays etc., and letting model to do the rest.</p>
 
 
 
