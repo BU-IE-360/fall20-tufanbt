@@ -1,0 +1,124 @@
+---
+title: "Inspection of 3 Data Examples and Related Google Trends Keywords"
+author: "Tufan Berk Tug - IE360 - Fall 2020"
+output: html_document
+---
+
+```{r setup,echo=FALSE,results="hide", warning=FALSE, message=FALSE}
+library(knitr)
+library(readxl)
+library(zoo)
+opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE, warning=FALSE, message=FALSE)
+```
+
+## Example 1: Number of Visitors
+
+Data of this example comes from TÜİK, and consist of the numbers of tourism visitors to Turkey by months, between 2012-2019. Here is the plot:
+
+```{r visitor plot, echo=FALSE}
+tourism <- read_excel("tourism.xlsx")
+tourism$date <- as.yearmon(tourism$date)
+plot(tourism$date, tourism$people / 1000, type = "l", ylab = "Visitors (thousands)", xlab = "Months")
+```
+  
+  Number of visitors has a yearly cyclical pattern, highs at summer and lows at winter. It also seems to have a linear uptrend. However, there is a sharp decrease in 2016 which is due to 2016 tourism crisis (terrorism activities, tension between Russia and Turkey). There was also a decrease in 2020 because of COVID-19 pandemic, this is why 2020 is not included.  
+  I used 5 different keywords from Google Trends to relate with this data. Since tourists are searching through the place names they are willing to visit, it was not possible to reflect the demand with only one keyword. I did some research to learn the most tourism revenue creating cities in Turkey, which happens to be Antalya and Istanbul. There were also high search volumes for some smaller districts such as Bodrum, Alanya and Marmaris. Eventually, I used the comparative trend data for "istanbul hotel", "antalya hotel", "marmaris hotel", "alanya hotel" and "bodrum hotel" and summed them all to yield one parameter. Here is the plot:
+  
+```{r trend plot1, echo=FALSE}
+plot(tourism$date, tourism$trend, type = "l", ylab = "Summed Trend Value", xlab = "Months")
+```
+
+  Shapes of the plots are very similar which shows the validity of the parameter choice. After some comparison and inspection, I also realized that Visitor numbers are 1 month lagged with respect to Trends value because people generally book hotels approximately one month before their trip. I validated my assumption by comparing correlation values of lagged and non-lagged pairs (Correlation jumped from 0.60s to 0.90s after lag adjustment) So, I matched them accordingly in the following chart and it is easy to see the correlation:
+  
+```{r comparison plot1, echo=FALSE}
+plot(tourism$date, tourism$people, type = "l", xlab = "Months", yaxt = 'n', ann=FALSE, col=3)
+par(new=TRUE)
+plot(tourism$date, tourism$trend, type = "l", xlab = "Months", yaxt= 'n', ann=FALSE, col=2 )
+legend("top", legend=c("Visitors", "Trends"),col=c(3, 2), lty=c(1,1), cex=0.8, text.font=4)
+```
+
+  We can also use multiple boxplots below for examining time series trend and the relationship between parameter and the data:
+
+```{r boxplots1, echo=FALSE}
+par(mfrow=c(1,2))
+boxplot(tourism$people[1:12],tourism$people[13:24], tourism$people[25:36], tourism$people[37:48], tourism$people[49:60],tourism$people[61:72], tourism$people[73:84], tourism$people[85:96], names = c(2012:2019), main="Yearly Boxplots of Visitors")
+boxplot(tourism$trend[1:12],tourism$trend[13:24], tourism$trend[25:36], tourism$trend[37:48], tourism$trend[49:60],tourism$trend[61:72], tourism$trend[73:84], tourism$trend[85:96], names = c(2012:2019), main="Yearly Boxplots of Trends")
+```
+
+## Example 2: House Sales
+
+Data of this example also comes from TÜİK, and consist of the numbers of house sales in Istanbul by months, between 2013-October 2020. Here is the plot:
+
+```{r sales plot, echo=FALSE}
+housesales <- read_excel("housesales.xlsx")
+housesales$date <- as.yearmon(housesales$date)
+plot(housesales$date, housesales$sales / 100, type = "l", ylab = "Sales (hundreds)", xlab = "Months")
+```
+  
+  Although there is no obvious pattern, sales are higher at the end of each year which is probably because of the raises on title deed fees at every year beginning.  
+  There are also two extraordinary peaks in December 2019 and July 2020 which stems from the low housing loan interests provided by public banks.  
+  As parameter, I used "istanbul satılık daire" keyword. Like the case of tourism visitors, lag adjustment should be made. Let's take a look at Trends data:
+  
+  
+```{r trend plot2, echo=FALSE}
+plot(housesales$date, housesales$trend, type = "l", ylab = "Trend Value", xlab = "Months")
+```
+
+  Compare them on the same plot:
+  
+```{r comparison plot2, echo=FALSE}
+plot(housesales$date, housesales$sales, type = "l", xlab = "Months", yaxt = 'n', ann=FALSE, col=3)
+par(new=TRUE)
+plot(housesales$date, housesales$trend, type = "l", xlab = "Months", yaxt= 'n', ann=FALSE, col=2 )
+legend("top", legend=c("Sales", "Trends"),col=c(3, 2), lty=c(1,1), cex=0.8, text.font=4)
+```
+
+  It is easily seen that there is some relation, but more attention should be paid and some manipulation should be done on data to have a better parameter. Take a look at boxplots, too:
+
+```{r boxplots2, echo=FALSE}
+par(mfrow=c(1,2))
+boxplot(housesales$sales[1:12],housesales$sales[13:24], housesales$sales[25:36], housesales$sales[37:48], housesales$sales[49:60],housesales$sales[61:72], housesales$sales[73:84],housesales$sales[85:94], names = c(2013:2020), main="Yearly Boxplots of Sales")
+boxplot(housesales$trend[1:12],housesales$trend[13:24], housesales$trend[25:36], housesales$trend[37:48], housesales$trend[49:60],housesales$trend[61:72], housesales$trend[73:84], housesales$trend[85:94], names = c(2013:2020), main="Yearly Boxplots of Trends")
+```
+
+  There are some outliers on both datasets this time, so some trimming may be needed.
+  
+## Example 3: Unemployment Rate
+
+Data of this example also comes from TÜİK, and consist of the unemployment rate in Turkey by months, between 2013-August 2020. Here is the plot:
+
+```{r rate plot, echo=FALSE}
+unemployment <- read_excel("unemployment.xlsx")
+unemployment$date <- as.yearmon(unemployment$date)
+plot(unemployment$date, unemployment$rate, type = "l", ylab = "Unemployment Rate (%)", xlab = "Months")
+```
+  
+  Again, there is a yearly cyclical pattern, highs on January-February and lows on May-June. It's probably because of seasonal workers and agricultural harvest times. Trend of yearly changes probably depend on the state of economy in the world and in Turkey.  
+  
+  As parameter, I used "iş ilanı" keyword. Unlike the other two cases, there is no need for lag adjustment since people search for jobs when they are unemployed, not before or after being unemployed. Here is the plot of Trends parameter:
+  
+  
+```{r trend plot3, echo=FALSE}
+plot(unemployment$date, unemployment$trends, type = "l", ylab = "Trend Value", xlab = "Months")
+```
+
+  Check whether graphs are alike or not:
+  
+```{r comparison plot3, echo=FALSE}
+plot(unemployment$date, unemployment$rate, type = "l", xlab = "Months", yaxt = 'n', ann=FALSE, col=3)
+par(new=TRUE)
+plot(unemployment$date, unemployment$trends, type = "l", xlab = "Months", yaxt= 'n', ann=FALSE, col=2 )
+legend("top", legend=c("Unemployment Rate", "Trends"),col=c(3, 2), lty=c(1,1), cex=0.8, text.font=4)
+```
+
+  Although Trends data is not an enough parameter to depend on alone, there is some observable relation between them. The largest deviation between them occurs on April 2020, with a tremendous drop on search volume, which probably occurs because of the desperate atmosphere on labor force markets in pandemic conditions.  
+  Lastly, take a look at boxplots:
+
+```{r boxplots3, echo=FALSE}
+par(mfrow=c(1,2))
+boxplot(unemployment$rate[1:12],unemployment$rate[13:24], unemployment$rate[25:36], unemployment$rate[37:48], unemployment$rate[49:60], unemployment$rate[61:72], unemployment$rate[73:84],unemployment$rate[85:92], names = c(2013:2020), main="Yearly Boxplots of Unemployment Rates")
+boxplot(unemployment$trends[1:12],unemployment$trends[13:24], unemployment$trends[25:36], unemployment$trends[37:48], unemployment$trends[49:60], unemployment$trends[61:72], unemployment$trends[73:84], unemployment$trends[85:92], names = c(2013:2020), main="Yearly Boxplots of Trends")
+```
+
+  As stated before, there is no clear yearly trend on unemployment rate that could be explained without other parameters. Except the huge inconsistency on 2020 data, parameter is somehow related to data.
+
