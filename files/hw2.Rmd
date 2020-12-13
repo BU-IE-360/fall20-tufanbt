@@ -1,0 +1,123 @@
+---
+title: "Inspection on the Determinants of Exchange Rate(USD/TRY)"
+author: "Tufan Berk Tug - IE360 - Fall 2020"
+output: html_document
+---
+
+```{r setup,echo=FALSE,results="hide", warning=FALSE, message=FALSE}
+library(knitr)
+library(readxl)
+library(zoo)
+library(ggplot2)
+opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE, warning=FALSE, message=FALSE)
+```
+
+# 1.Introduction 
+
+  Turkey, being a country using its own currency, is seriously affected by the foreign currency exchange rates. Actually, exchange rates have an inevitable importance for every country trading with others. For those citizens that buy and use imported products a lot, increasing exchange rates are one of biggest nightmares. Due to this reason, exchange rate is one of the economic terms that even a decent person has an idea and interest in it.  
+Beside the people's individual interest, exchange rates also deeply influence one country's general economic conditions. Turkey has high negative trade balances, namely trade deficits, recently, which implies that Turkey is a country importing more than it exports. Higher exchange rates mean less purchasing power against foreign firms and more debts. Interestingly, it is a two sided relationship: Trade balances are one of the most important factors determining exchange rates.  
+After some research, it could be seen that interest rates and unemployment rates are also important determinant factors of exchange rates. For aforementioned reasons, this report inspects the relations between USD/TRY exchange rate and Turkey's trade balance, unemployment rate and weighted interest rate applied to commercial loans. Data is pulled from an excel file that can be accessed from Electronic Data Delivery System ["EVDS"](https://evds2.tcmb.gov.tr/index.php?/evds/serieMarket). Date range used for this study is from August 2012 to August 2020 in monthly manner due to data accessibility reasons.
+
+# 2.Analysis
+
+##  a.Data Manipulation
+
+  To start with, data must be imported from the excel file with read_excel function and brought to an understandable and more useful shape with some manipulations. First entries with column names can be seen after manipulation as an example:  
+
+```{r importing and shaping, echo=TRUE}
+EVDS <- read_excel("EVDS.xlsx", 
+    range = "A1:E98", col_types = c("text", "numeric", "numeric", "numeric", "numeric"))
+names(EVDS) <- c("Date", "TrBal", "ExcRate", "IntRate", "UnempRate")
+EVDS$Date <- as.yearmon(EVDS$Date)
+EVDS <- cbind(EVDS,format(EVDS$Date, "%Y"),format(EVDS$Date, "%m"))
+names(EVDS)[6:7] <- c("Year","Month")
+head(EVDS)
+```
+
+## b.Data Visualisation and Comparative Analysis
+
+### Exchange Rates
+
+  Firstly, it would be a good idea to analyze our main data, exchange rate levels, by visualizing in a yearly barplot to see its pattern:  
+```{r visualization1, echo=FALSE}
+par(mfrow=c(2,1))
+ggplot(EVDS, aes(x = Date, y = ExcRate)) + geom_bar(stat='identity', colour = "black", fill = "indianred2") + labs(title="USD/TRY Exchange Rate Levels", x= "Date", y="Exchange Rate")
+ggplot(EVDS, aes(x = Month, y = ExcRate)) + geom_bar(stat='identity', colour = "black", fill = "indianred2") + labs(title="USD/TRY Exchange Rate Levels (Yearly)", x= "Months", y="Exchange Rate") + facet_wrap(facets=vars(Year), ncol=3) 
+  
+ 
+```
+  
+  As seen in yearly graphs, there is no periodic pattern in yearly basis, but there is an overall increase over years. To explain this overall increase, we will now analyze 3 other time series data and compare them to exchange rate levels. Since exchange rates does not have any periodicity over years, there is no need for examining potential determinants in a yearly basis.  
+
+### Trade Balance Levels
+  Let's start with visualizing trade balance levels and checking the correlation between exchange rate and trade balance levels to see if there is a relation or not:  
+  
+```{r visualization2, echo=FALSE}
+ggplot(EVDS, aes(x = Date, y = TrBal)) + geom_bar(stat='identity', colour = "black", fill = "orange2") + labs(title="Trade Balance Levels of Turkey", x="Date", y="Trade Balance (Million $)" )
+plot(EVDS$Date, EVDS$ExcRate, type = "l", xlab = "Date", yaxt = 'n', ann=FALSE, col=3)
+par(new=TRUE)
+plot(EVDS$Date, EVDS$TrBal, type = "l", xlab = "Date", yaxt= 'n', ann=FALSE, col=2 )
+title(main = "Exchange Rate and Trade Balance in Same Graph", xlab = "Date")
+legend("top", legend=c("Exchange Rate", "Trade Balance"),col=c(3, 2), lty=c(1,1), cex=0.8, text.font=4)
+paste("Correlation value between Trade Balance and Exchange Rate:", round(cor(EVDS$ExcRate,EVDS$TrBal),digits=4))
+
+```
+  There is no obvious relation between two variables, but it can be seen that there are many corresponding tops and bottoms. Correlation value also indicates a relation although it is not so powerful.  
+
+### Interest Rates
+
+  Now, we will check commercial loan interest rates to see if we will be able to see a stronger relation:  
+
+```{r visualization3, echo=FALSE}
+ggplot(EVDS, aes(x = Date, y = IntRate)) + geom_bar(stat='identity', colour = "black", fill = "lightslateblue") + labs(title="Interest Rate Levels in Turkey", x="Date", y="Interest Rate (%)" )
+plot(EVDS$Date, EVDS$ExcRate, type = "l", xlab = "Date", yaxt = 'n', ann=FALSE, col=7)
+par(new=TRUE)
+plot(EVDS$Date, EVDS$IntRate, type = "l", xlab = "Date", yaxt= 'n', ann=FALSE, col=4 )
+title(main = "Exchange Rate and Interest Rate in Same Graph", xlab = "Date")
+legend("top", legend=c("Exchange Rate", "Interest Rate"),col=c(7, 4), lty=c(1,1), cex=0.8, text.font=4)
+
+paste("Correlation value between Interest Rate and Exchange Rate:", round(cor(EVDS$ExcRate,EVDS$IntRate),digits=4))
+
+```
+There is a more obvious relation between interest rate and exchange rate as proposed by comparative graph and correlation value. However, there is an inconsistency between two variables after mid-2019 compared to more consistent earlier data, which may stem from government intervention to interest rates.  
+
+### Unemployment Rates  
+
+  Lastly, here is the visualization and analysis of unemployment rate and its relation with exchange rate:  
+
+```{r visualization4, echo=FALSE}
+ggplot(EVDS, aes(x = Date, y = UnempRate)) + geom_bar(stat='identity', colour = "black", fill = "darkseagreen3") + labs(title="Unemployment Rate Levels of Turkey", x="Date", y="Unemployment Rate (%)" )
+plot(EVDS$Date, EVDS$ExcRate, type = "l", xlab = "Date", yaxt = 'n', ann=FALSE, col=11)
+par(new=TRUE)
+plot(EVDS$Date, EVDS$UnempRate, type = "l", xlab = "Date", yaxt= 'n', ann=FALSE, col=26 )
+title(main = "Exchange Rate and Unemployment Rate in Same Graph", xlab = "Date")
+legend("top", legend=c("Exchange Rate", "Unemployment Rate"),col=c(11, 26), lty=c(1,1), cex=0.8, text.font=4)
+
+paste("Correlation value between Unemployment Rate and Exchange Rate:", round(cor(EVDS$ExcRate,EVDS$UnempRate),digits=4))
+
+```
+Relation between exchange rate and unemployment rate is even more obvious than interest rates. However, unemployment rate has a seasonal pattern which weakens the correlation. Seasonally adjusted version that is provided by [TÜİK](https://data.tuik.gov.tr/Bulten/Index?p=Isgucu-Istatistikleri-Agustos-2020-33792) would be more preferred:  
+
+```{r visualization5, echo=FALSE}
+x <- read_excel("a.xls", col_names = FALSE, range = "Q100:Q196", col_types = "numeric")
+names(x) <- "UnempRate2"
+EVDS <- cbind(EVDS,x)
+ggplot(EVDS, aes(x = Date, y = UnempRate2)) + geom_bar(stat='identity', colour = "black", fill = "royalblue4") + labs(title="Unemployment Rate Levels of Turkey (Seasonally Adjusted)", x="Date", y="Unemployment Rate (%)" )
+plot(EVDS$Date, EVDS$ExcRate, type = "l", xlab = "Date", yaxt = 'n', ann=FALSE, col=22)
+par(new=TRUE)
+plot(EVDS$Date, EVDS$UnempRate2, type = "l", xlab = "Date", yaxt= 'n', ann=FALSE, col=13 )
+title(main = "Exchange Rate and S. Adj. Unemployment Rate in Same Graph", xlab = "Date")
+legend("top", legend=c("Exchange Rate", "Unemployment Rate(S. Adj)"),col=c(22, 13), lty=c(1,1), cex=0.8, text.font=4)
+
+paste("Correlation value between Seasonally Adjusted Unemployment Rate and Exchange Rate:", round(cor(EVDS$ExcRate,EVDS$UnempRate2),digits=4))
+```
+  As we suggested, seasonally adjusted version of data yields us a stronger relationship and so higher correlation.  
+  
+# 3.Conclusion  
+
+  After conducting these mathematical and visual analyses, we see that the chosen three variables are good candidates for explaining the movement of exchange rate. As we did for unemployment rate, there could be need for more adjustments also for interest rate and trade deficits so that we have better correlations. As a final analysis, checking the adjusted R-squared value of linear regression model using these three variables might be insightful:  
+  
+```{r linear model, echo=TRUE}
+summary(lm(ExcRate~IntRate+TrBal+UnempRate2, data = EVDS))
+```  
+  With an adjusted R-squared value of 0.8317 and high significance levels for each determinant, created linear regression model shows us that potential determinants do a decent work on explaining the behavior of exchange rate.
