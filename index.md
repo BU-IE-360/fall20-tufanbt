@@ -7,5 +7,5 @@
 [Here](files/hw2.html) is my Inspection on the determinants of USD/TRY exchange rate.  
 [Here](files/hw2.Rmd) is the .Rmd file for the homework above.
 ## Week 11 (January 11)
-[Here](files/hw3.html) is my Linear Model Construction to Forecast the Number of Newly Established Firms.
+[Here](files/hw3.html) is my Linear Model Construction to Forecast the Number of Newly Established Firms.  
 [Here](files/hw3.Rmd) is the .Rmd file for the homework above.
