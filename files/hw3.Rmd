@@ -1,0 +1,196 @@
+---
+title: "Linear Model for Forecasting the Total Number of Newly Established Firms"
+author: "Tufan Berk Tug - IE360 - Fall 2020"
+output: html_document
+---
+
+```{r setup,echo=FALSE,results="hide", warning=FALSE, message=FALSE}
+library(knitr)
+library(readxl)
+library(zoo)
+library(ggplot2)
+library(data.table)
+library(forecast)
+opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE, warning=FALSE, message=FALSE)
+```
+
+# 1.Introduction 
+  In this study, the aim is to create a linear model to yield sensible forecasts on the number of newly established firms, using related independent data from EVDS. Since the number of newly established firms highly depends on the general economic situation, most of the considered data is indicators of the general economic situation of Turkey. Let's check which variables are considered for what reason:
+  Total Industrial Production: Since most of the companies use the goods produced by industries in Turkey as raw material, volume of this production may be highly correlated with the new enterprises. High production volumes would create surplus, which can be a good incentive to start new businesses.
+  Exchange Rates and Interest Rates: Exchange rates are one of the most valuable data in the domain of economic research. Any fluctuation in the exchange rates affects all businesses as we have an open market economy conditions in Turkey. On the other hand, interest rates are also very important since it determines the attractiveness of using loans to start businesses. It should be noted that commercial loans average interest rates are used since it is the one used for businesses.
+  Producer Price Index: Just like the volume of industrial production, prices of the goods used by producers are very important factors. In times that it is relatively cheaper to run a business due to low PPI, people will be more encouraged to start new enterprises.
+  Financial Situation of Household and General Economic Situation: Because it is very risky to start a business from scratch, it is likely that the financial situation of people is correlated with our target variable. Also the perceived general economic situation of the country is also important since customers of businesses are residents of the country most of the time. It should be noted that these data are derived from surveys.
+  The Probability of Saving: Being another survey derived data, expectation of possible future savings may also be correlated since these savings are useful for funding new businesses.
+  Unemployment: High unemployment rate means that there are more potential entrepreneurs and employees for new firms. Since it is hard for anyone to take the risk of abandoning already established living standards by resigning, already unemployed people are more likely to start new businesses.  
+
+# 2.Analysis
+
+##  a.Data Manipulation
+
+  To start with, data mentioned in introduction must be imported from the excel file with read_excel function and brought to an understandable and more useful shape with some manipulations. First entries with column names can be seen after manipulation as an example:  
+
+```{r importing and shaping, echo=TRUE}
+data1 <- as.data.table(read_excel("hw3.xlsx", range = "A1:K108"))
+names(data1) <- c("Date", "IndProd", "ExcRate", "IntRate", "DPPI", "NDPPI", "FSH", "GES", "PS", "TNEF", "UnEmp")
+data1$Date <- as.yearmon(data1$Date)
+head(data1)
+```
+
+## b.Data Visualisation and Analysis
+
+### Target Variable Analysis and Trend Component
+
+  Firstly, it would be a good idea to analyze our main data, the number of newly establish firms, to see any pattern which may be useful in the linear model. So we start by visualizing the data in a plot:  
+```{r visualization1, echo=FALSE}
+ggplot(data1, aes(x = Date, y=TNEF)) + geom_line(color="red") + labs(title = "Total Number of Newly Established Firms(01/2012-11/2020)", x = "Date", y= "Newly Established Firms") + geom_point()
+ 
+```
+  
+  It can be easily seen that there is an uptrend in data except the 2020 April-May which is probably because of the uncertainty due to emergence of pandemic. So a trend component should be added to linear model. Also the highs and lows in years generally coincide with same months: highs on January, lows between August-November. The first model with the trend component and yearly seasonality component can be seen below after needed manipulations:  
+  
+```{r model1, echo=FALSE}
+data1 <- data1[, Trend:=1:.N]
+Month <- seq(1,12, by=1)
+data1 <- cbind(data1,Month)
+model1 <- lm(TNEF~Trend+as.factor(Month), data1)
+summary(model1)
+```
+  By checking p-values of F and T statistics, we can easily say that trend and months are significant factors. However, there is still a large unexplained portion of variance as R-squared value is 0.6368. We will try to explain them using the independent variables. But first, let's check the residuals of the model to see if assumptions of linear models hold or not:
+  
+```{r residuals1, echo=FALSE}
+checkresiduals(model1)
+```
+  Zero mean for residuals assumption seems to be satisfied. Unchanging variance assumption is not explicitly violated except the pandemic uncertainty period. Residuals are highly autocorrelated at lag 1 although we used trend component. In order to get rid of autocorrelation, we can use lagged residual values as a parameter in linear model:  
+  
+```{r model12, echo=FALSE}
+data1 <- data1[,Residual_1:=0]
+data1$Residual_1[1]<- NA
+data1$Residual_1[2:107]<- residuals(model1)[1:106]
+model1 <- lm(TNEF~Trend+as.factor(Month)+Residual_1, data1)
+summary(model1)
+checkresiduals(model1)
+```
+  Now, we have a better R-squared value and no apparent autocorrelation. Let's start considering the independent variables.
+  
+### Independent Variable Analysis and Extended Linear Models
+
+#### Interest Rate
+  
+  Let's start with the interest rate. Best starting point is the comparison of first model's residuals and interest rates on a plot to see if interest rate data could help us explaining the residuals:
+  
+```{r intrate, echo=FALSE}
+data1 <- data1[,Residuals:=NA]
+data1$Residuals[2:107] <- residuals(model1)
+ggplot(data1, aes(x= IntRate, y= Residuals)) + geom_point() + labs(title = "Interest Rate vs Residuals", x= "Interest Rate(%)", y= "Residuals")
+```  
+
+  
+  Unfortunately, interest rate doesn't seem to be able to help us since the points on the plot are scattered and interest rate and our residuals are seemingly not correlated.
+  
+#### Exchange Rate  
+
+  Now, we will apply the same comparison methods to see if exchange rate (US Dollar/Turkish Lira) helps us:
+  
+```{r excrate, echo=FALSE}
+ggplot(data1, aes(x= ExcRate, y= Residuals)) + geom_point() + labs(title = "Exchange Rate vs Residuals", x= "Exchange Rate (US Dollar/Turkish Lira)", y= "Residuals")
+```  
+  
+  Exchange rates also do not show any relation with residuals.
+  
+#### Industrial Production
+  
+  As mentioned before, industrial production volumes may help us explain the target variable. We will plot it against residuals as we did before:
+  
+```{r indprod, echo=FALSE}
+ggplot(data1, aes(x= IndProd, y= Residuals)) + geom_point() + labs(title = "Industrial Production vs Residuals", x= "Industrial Production Volume", y= "Residuals")
+```  
+  
+  Luckily, residuals and industrial production volume seem to have a positive relationship and incorporating industrial production data into our linear model will help us yield better estimates:  
+  
+```{r model2, echo=FALSE}
+model2 <- lm(TNEF~Trend+as.factor(Month)+Residual_1+IndProd, data1)
+summary(model2)
+```  
+  
+  As we guessed, industrial production is a significant factor in the linear model and residual standard error dropped from 1062 to 749.9. New adjusted R-squared value is 0.846 which is considerably higher than the first model we established. Let's check the residual analysis of our new model to see if we could eliminate the assumption violations:
+  
+```{r residual2, echo=FALSE}
+checkresiduals(model2)
+```
+  Autocorrelation problem came up again, so it is better to update lagged residual values.
+  
+```{r model3, echo=FALSE}
+model1 <- lm(TNEF~Trend+as.factor(Month)+IndProd, data1)
+data1$Residual_1 <- NA
+data1$Residual_1[2:107] <- residuals(model1)
+model2 <- lm(TNEF~Trend+as.factor(Month)+Residual_1+IndProd, data1)
+summary(model2)
+checkresiduals(model2)
+```
+  After the update, our model is better in every aspect. Autocorrelation test gives considerably higher p-value compared to the one without industrial production. The only problem is the lack of normality of the residuals. We can continue to check whether other independent values can help us.   
+
+#### Domestic Producer Price Index
+
+  Conducting the same steps as before, we yield the following plot:
+  
+```{r dppi, echo=FALSE}
+data1 <- data1[,Residuals:=NA]
+data1$Residuals[2:106] <- residuals(model2)
+ggplot(data1, aes(x= DPPI, y= Residuals)) + geom_point() + labs(title = "Domestic PPI vs Residuals", x= "Domestic PPI", y= "Residuals")
+```    
+
+  DPPI also show no correlation with model's residuals. Since Non-domestic PPI is a combination of the effects of Domestic PPI and exchange rate, and both of them were uncorrelated, I will not waste time on checking it.
+  
+#### Financial Situtation of Household  
+
+  Let's check if the perceived financial situation of people's selves helps us in explaining the residuals:
+  
+```{r fsh, echo=FALSE}
+ggplot(data1, aes(x= FSH, y= Residuals)) + geom_point() + labs(title = "Financial Situation of Household vs Residuals", x= "Financial Situation of Household", y= "Residuals")
+```   
+
+  Apparently, there is no significant relationship between residuals and FSH.
+
+
+#### General Economic Situtation 
+
+
+  Instead of the perceived self economic situation, now check the perceived general economic situation in Turkey:
+  
+```{r GES, echo=FALSE}
+ggplot(data1, aes(x= GES, y= Residuals)) + geom_point() + labs(title = "General Economic Situation vs Residuals", x= "General Economic Situation", y= "Residuals")
+```
+  
+  Just like the FSH, General Economic Situation survey results do not help us explaining the residuals.  
+  
+#### Probability of Saving
+
+  Just before the unemployment data, let's check the last survey data that we use:
+  
+```{r PS, echo=FALSE}
+ggplot(data1, aes(x= PS, y= Residuals)) + geom_point() + labs(title = "Probability of Saving vs Residuals", x= "Probability of Saving", y= "Residuals")
+```
+
+  Probability of saving data is also show a scattered fashion versus Residuals data. So, it also doesn't help our model.
+  
+#### Unemployment Rate
+
+  Last but not least, it is the for unemployment rate. In most of the research studies on economy domain, unemployment rate plays an important role. In order to see whether same is valid for our case or not, we will plot it against residuals:
+  
+```{r unemp, echo=FALSE}
+ggplot(data1, aes(x= UnEmp, y= Residuals)) + geom_point() + labs(title = "Unemployment Rate vs Residuals", x= "Unemployment Rate", y= "Residuals")
+```
+  
+  Unemployment rate also does not seem to have any correlation with residuals.
+  
+# 3.Conclusion
+
+  Although we didn't incorporate the variables to our linear model except industrial production, they may still be related to target variable. Trend and yearly seasonality components might be the reason why they seem useless to our model since they include the effect of economic parameters with similar patterns. 
+  To sum up, we were able to explain the behavior of newly established firms data with the dummy variables created for trend and yearly patterns. The only independent data we used in our model was industrial production volume data. The final version of our model is as follows: 
+  
+```{r modelfinal, echo=FALSE}
+summary(model2)
+checkresiduals(model2)
+```
+  We can't make a prediction for next level of target variables due to the missing data. It could be overcame by using lagged values of missing data.
+  
