@@ -9,3 +9,6 @@
 ## Week 11 (January 11)
 [Here](files/hw3.html) is my Linear Model Construction to Forecast the Number of Newly Established Firms.  
 [Here](files/hw3.Rmd) is the .Rmd file for the homework above.
+## Week 12 (January 23)
+[Here](files/hw4.html) is my work on Transforming Electricity Consumption for Stationarity.  
+[Here](files/hw4.Rmd) is the .Rmd file for the homework above.
