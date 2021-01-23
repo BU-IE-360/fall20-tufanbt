@@ -1,0 +1,187 @@
+---
+title: "Transforming Electricity Consumption for Stationarity"
+author: "Tufan Berk Tug - IE360 - Fall 2020"
+output: html_document
+---
+
+```{r setup,echo=FALSE,results="hide", warning=FALSE, message=FALSE}
+library(knitr)
+library(readxl)
+library(zoo)
+library(ggplot2)
+library(data.table)
+library(forecast)
+library(lubridate)
+library(stats)
+library(urca)
+opts_chunk$set(tidy.opts=list(width.cutoff=60),tidy=TRUE, warning=FALSE, message=FALSE)
+```
+
+# 1.Introduction 
+  In this study, the aim is to transform the non-stationary electricity consumption in Turkey data to a stationary one and use it to make predictions using the transformed data. Related data is made publicly available by EPİAŞ. Just like most of the data we may encounter, electricity consumption data may also need some transformations to reach stationarity. The importance of stationarity comes from the the way predictions are made. Since we generally use regressions in forecasting and stationarity is an assumption for using regression, the data should be made stationary as much as possible. 
+  
+  Stationary data must have non-changing mean and variance over time. For this purpose, there are many tools to use. We can use power or log transformations to prevent increasing variance. We can detrend the data using decomposition or differencing to eliminate changing means. In order to check stationarity, we can use Ljung-Box and KPSS tests.
+
+# 2.Analysis  
+
+##  a.Data Manipulation  
+
+  First, I will read the data downloaded from EPİAŞ website in .csv format and apply some manipulations to make it useful. These manipulations and the form of the data after manipulations can be seen below:  
+
+```{r intro, echo=TRUE}
+hourly_consumption<- as.data.table(read.csv(file='hw4.csv'))
+names(hourly_consumption) <- c("Date", "Hour", "Consumption")
+hourly_consumption$Date <- as.Date(hourly_consumption$Date, format = "%d.%m.%Y")
+hourly_consumption$Hour <- rep(seq(0,23, by=1), times = nrow(hourly_consumption)/24)
+hourly_consumption[,Consumption:=gsub('\\.', '', Consumption)]
+hourly_consumption[,Consumption:=gsub('\\,', '.', Consumption)]
+hourly_consumption[,Consumption:=as.numeric(Consumption)]
+head(hourly_consumption)
+```
+
+  The data consist of hourly consumption, but the predictions needed are daily ones. So, I will transform the data to daily form using the means of consumption each day: 
+
+```{r daily, echo=TRUE}
+daily_consumption=hourly_consumption[,list(mean_consumption=mean(Consumption, na.rm = T)),by=list(Date)]
+head(daily_consumption)
+```
+
+  From now on, data are ready to use.
+
+## b.Stationarity
+
+  Best point to start with is plotting the data to see what is needed:  
+  
+```{r plotting1, echo=FALSE}
+ggplot(daily_consumption, aes(x=Date, y= mean_consumption)) + geom_line(color="red") + labs(title = "Daily Mean of Electricity Consumption in Turkey", x = "Date", y= "Consumption (MWh)")
+plot(daily_consumption$mean_consumption[8:22], type = 'l')
+```
+  
+  Data have an obvious trend (not a linear one) over time since its mean is changing. Years are likely to have similar shapes due to yearly seasonalities which may be related to temperature and may be explained using month data. The variance also seems problematic probably due to some considerably lower consumptions on special days. Second graph also shows the strong similarity between the consumptions of the weeks.
+  
+ After visual inspection, let's use KPSS test:
+ 
+```{r kpsstest, echo=FALSE}
+summary(ur.kpss(daily_consumption$mean_consumption))
+``` 
+
+  According to the value of KPSS test statistic which is considerably lower than any critical value, the data are not stationary. To start with, we can check the partial autocorrelation information to decide on what to do:
+  
+```{r pacf, echo=FALSE}
+pacf(daily_consumption$mean_consumption)
+``` 
+
+  There is a strong positive partial autocorrelation at lag1 and lag7. Autocorrelation at lag7 can be explained as the day of the week actually affects the consumption, such as lower consumptions on Sundays. Autocorrelation at lag1 may be the signal of a increasing overall consumption which can be explained as increasing population, spread of technology, developing industry etc.
+  
+  So, I will start by factoring out the effect of the day of the week by transforming every day to Wednesday as a base case. Later, we can transform the data back by inverting our operations. Let's check how our data look like after this transformation:
+  
+  
+```{r dotw, echo=FALSE}
+daily_consumption[, day := as.factor(weekdays(Date))]
+daily_means <- daily_consumption[,list(effect=mean(mean_consumption)),by=list(day)]
+daily_consumption <- cbind(daily_consumption, daily_means$effect)
+names(daily_consumption)[4] <- "day_effect"
+daily_consumption <- daily_consumption[, day_adjusted:= mean_consumption - day_effect + daily_means$effect[4]]
+pacf(daily_consumption$day_adjusted)
+```
+
+  Partial autocorrelation function declares that autocorrelation at lag7 is handled well. However, we know that there is a yearly seasonality which stems from temperature and cannot be seen on partial autocorrelation function since it only shows us up to lag30. So, adjusting the data also for monthly averages would be beneficial:
+  
+  
+```{r moty, echo=FALSE}
+daily_consumption[, month := as.factor(month(Date))]
+monthly_means <- daily_consumption[,list(effect=mean(day_adjusted)),by=list(month)]
+daily_consumption[, month_effect:= 0]
+for(i in 1:nrow(daily_consumption)){
+  daily_consumption$month_effect[i] <- monthly_means$effect[daily_consumption$month[i]]
+}
+daily_consumption <- daily_consumption[, month_adjusted:= day_adjusted - month_effect + monthly_means$effect[4]]
+ggplot(daily_consumption, aes(x=Date, y= month_adjusted)) + geom_line(color="red") + labs(title = "Adjusted Electricity Consumption in Turkey", x = "Date", y= "Consumption (MWh)")
+```  
+
+  Just like the daily adjustment case, we now transformed every month as if it is a regular April day. Plot shows much better performance about stationarity except some outliers due to special days (national or religious holidays) and a temporary overall decrease due to pandemic conditions. 
+  
+  When the partial autocorrelation was checked, we dealt with lag7 by daily adjustments. For the lag1 autocorrelation, It can be sensible to use differencing at lag1:
+  
+```{r differencing, echo=FALSE}
+daily_consumption[, differ:= month_adjusted - shift(month_adjusted,1)]
+ggplot(daily_consumption, aes(x=Date, y= differ)) + geom_line(color="red") + labs(title = "Electricity Consumption Differences in Turkey", x = "Date", y= "Difference in Consumption (MWh)")
+pacf(daily_consumption$differ[-1])
+summary(ur.kpss(daily_consumption$differ))
+```  
+
+  We should have also dealt with the outliers arising from special days, but KPSS test result seems pretty adequate for the sake of this study. Next, we will make predictions.
+  
+## c.Predictions
+
+  The important point for predictions is that after all predictions, we should invert all the transformations we made to yield real value predictions. For the prediction, we will use ARIMA model with best parameters coming from auto.arima function:
+  
+```{r arima, echo=FALSE}
+fitted <- auto.arima(daily_consumption$differ, seasonal = F)
+summary(fitted)
+```  
+  auto.arima function suggests as a model with parameters (2,0,1) which means that there is 2 autoregressive, 1 moving average factor in the model. After taking the predictions from ARIMA model and doing the needed inverse transformations, our point predictions can be seen as follows: 
+  
+```{r predictions, echo=FALSE}
+forecasted <- forecast(fitted, h=14)
+predictions <- rep(0, length.out = 14)
+predictions[1] <- forecasted$mean[1] + daily_consumption$month_adjusted[nrow(daily_consumption)]
+for(j in 2:14){
+  predictions[j] <- predictions[j-1] + forecasted$mean[j]
+}
+predictions <- predictions - monthly_means$effect[4] + monthly_means$effect[1]
+predictions <- predictions - daily_means$effect[4]
+predictions <- predictions + daily_consumption$day_effect[7:20]
+predictions <- as.data.table(predictions)
+Date <- as.Date('2021-01-09')
+for(k in 2:14){
+  Date[k] <- Date[k-1]+1
+}
+Date <- as.data.table(Date)
+predictions <- cbind(Date, predictions)
+View(predictions)
+```  
+
+
+# 3.Conclusion
+
+  For evaluating the overall performance of our model, it is time to calculate some performance measures using our predictions and realized values. First, it is needed to do the same manipulations as before to yield realized values for the predicted period:
+
+```{r datareading, echo=TRUE}
+predicted_realized <- as.data.table(read.csv(file='predictedrealized.csv'))
+names(predicted_realized) <- c("Date", "Hour", "Consumption")
+predicted_realized$Date <- as.Date(predicted_realized$Date, format = "%d.%m.%Y")
+predicted_realized$Hour <- rep(seq(0,23, by=1), times = nrow(predicted_realized)/24)
+predicted_realized[,Consumption:=gsub('\\.', '', Consumption)]
+predicted_realized[,Consumption:=gsub('\\,', '.', Consumption)]
+predicted_realized[,Consumption:=as.numeric(Consumption)]
+predrealdaily=predicted_realized[,list(mean_consumption=mean(Consumption, na.rm = T)),by=list(Date)]
+head(predrealdaily)
+```  
+  Next, we will calculate the bias, mean absolute percentage error and weighted mean absolute percentage error using a function:
+
+```{r statistic calcs, echo=FALSE}
+stats <- function(actual, forecasted){
+  n=length(actual)
+  error = actual-forecasted
+  mean=mean(actual)
+  sd=sd(actual)
+  bias = sum(error)/sum(actual)
+  mape = sum(abs(error/actual))/n
+  mad = sum(abs(error))/n
+  wmape = mad/mean
+  l = data.frame(n,mean,sd,bias,mape,mad,wmape)
+  return(l)
+}
+predrealdaily <- predrealdaily[, predictions:=predictions$predictions]
+predrealdaily[, stats(mean_consumption,predictions)]
+```
+
+  We have the statistics, but we need a base case to compare. So, it is sensible to use calculated daily means as predictor in base case. Statistics of base case are as follows:
+  
+```{r basecase stats, echo=FALSE}
+stats(predrealdaily$mean_consumption, daily_consumption$day_effect[7:20])
+```
+
+  After comparison, we can see that our model is considerably better than base case. However, it can still be enhanced by handling special day effects which we didn't yet. After that point, existing outliers could be analyzed again to further corrections.
+
