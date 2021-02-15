@@ -12,3 +12,6 @@
 ## Week 12 (January 23)
 [Here](files/hw4.html) is my work on Transforming Electricity Consumption for Stationarity.  
 [Here](files/hw4.Rmd) is the .Rmd file for the homework above.
+
+## Last Week
+[Here](files/IE360_group12_project_report.html) is our project's report.
